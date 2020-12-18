@@ -9,7 +9,14 @@ import ToyContainer from './components/ToyContainer'
 class App extends React.Component{
 
   state = {
+    apiResponse: [],
     display: false
+  }
+
+  componentDidMount(){
+    fetch('http://localhost:4000/toys')
+    .then(r => r.json())
+    .then(data => this.setState({apiResponse: data}))
   }
 
   handleClick = () => {
@@ -19,20 +26,66 @@ class App extends React.Component{
     })
   }
 
+  deleteToy = (id) => {
+    fetch(`http://localhost:4000/toys/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Accepts": "application/json"
+      }
+    })
+    .then(r => r.json())
+    .then(() => {
+      const newArray = this.state.apiResponse.filter(toy => toy.id !== id)
+      this.setState({apiResponse: newArray})
+    })
+  }
+
+  addNewToyHandler = (toyObj) => {
+    toyObj.likes = 0
+    fetch('http://localhost:4000/toys', {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accepts": "application/json"
+      },
+      body: JSON.stringify(toyObj)
+    })
+    .then(r => r.json())
+    .then(newToyObj => this.setState({apiResponse: [...this.state.apiResponse, newToyObj]}))
+  }
+
+  updateLike = (id) => {
+    let objLikes = this.state.apiResponse.find(toy => toy.id === id).likes
+    console.log(objLikes)
+    fetch(`http://localhost:4000/toys/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "Accepts": "application/json"
+      },
+      body: JSON.stringify({likes: objLikes + 1})
+    })
+    .then(r => r.json())
+    .then(newToyObj => {
+      this.setState({apiResponse: this.state.apiResponse.map(toy => toy.id === id ? newToyObj: toy)}) 
+    })
+  }
+
   render(){
     return (
       <>
         <Header/>
         { this.state.display
             ?
-          <ToyForm/>
+          <ToyForm addNewToy={this.addNewToyHandler} />
             :
           null
         }
         <div className="buttonContainer">
           <button onClick={this.handleClick}> Add a Toy </button>
         </div>
-        <ToyContainer/>
+        <ToyContainer updateLike={this.updateLike} deleteToy={this.deleteToy} toyArray={this.state.apiResponse}/>
       </>
     );
   }
